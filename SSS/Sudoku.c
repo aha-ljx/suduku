@@ -1,10 +1,6 @@
 //@Sudoku.c
 #include "Global.h"
-/**
-* @param   SudokuFile(数独CNF文件名), holes(挖洞数)
-* @return  status 函数执行状态
-* @brief   创建数独初始棋盘，并将其转化为CNF格式写入到CNF文件中  
-*/
+
 status CreateSudokuToFile(char SudokuFile[], int holes)
 {
     int sudoku[ROW][COL]={0};       //声明数独终盘二维数组，并全部初始化为0 
@@ -17,13 +13,12 @@ status CreateSudokuToFile(char SudokuFile[], int holes)
     		player[i][j] = play[i][j];
 		}
 	}
+    
     //把数独初盘写进CNF文件
 	TranToCNF(play, holes, SudokuFile);
 	return OK;
 }
 
-
-//生成完整数独棋盘
 void CreateSudoku(int rows[][COL])
 {
 	FirstRow(rows[0]);    //生成数独第一行 
@@ -31,56 +26,72 @@ void CreateSudoku(int rows[][COL])
 	return;
 }
 
-/**
-* @param   firstrow
-* @return  void
-* @brief  利用当前系统时间随机生成数独棋盘第一行 
-*/
-void FirstRow(int firstrow[])
-{
-	int i, j;
-	srand((unsigned int)time(NULL));                      //此处可能导致重复序列，可以把这句代码放在主函数里
-	for(i=0; i<COL; i++){
-		firstrow[i] = rand() % 9 + 1;   //rand()%9得到0~8
-		j = 0;
-		while(j<i){//保证新的赋值不等于已有的数字
-			if(firstrow[j]==firstrow[i]){
-				firstrow[i] = rand() % 9 + 1;
-				j = 0;
-			}
-			else{
-				j++;
-			}
-		}
-	}
-}
 
 /**
 * @param   rows（用于存储数独棋盘的二维数组），i（第i行，从0开始数），j（第j列，从0开始数） 
+* @return  status（函数执行状态） 
 * @brief   利用递归给第i行第j列位置赋上一个数字，直至生成整个数独棋盘 
 * @detail  check[COL+1]，值为WA时表示下标数字已经被同行或同列或同宫使用过，值为AC表示未使用过
+* @todo     
 */
 status OtherRows(int rows[][COL], int i, int j){
-	if(i<ROW && j<COL){                           //按行按列进行填充
+	if(i<ROW && j<COL){
 		int x, y, k;
-		int check[COL+1] = {AC};                  //一维数组标记是否被使用
+		int check[COL+1] = {AC};                  
 		for(x=0; x<i; x++) check[rows[x][j]] = WA;//标记同列已使用过的数字 
 		for(x=0; x<j; x++) check[rows[i][x]] = WA;//标记同行已使用过的数字 
-		for(x=i/3*3; x<=i; x++){  //x坐标是左上角格子坐标 //标记同宫已使用过的数字（以当前数字为中心的3*3格子） 
-			if(x==i){
-				for(y=j/3*3; y<j; y++) check[rows[x][y]] = WA;//当遇到当前格子，之后列不用扫描
+		//标记同宫使用过的数字
+		int bx=i/3,by=j/3;
+		for(x= bx*3;x <= i;x++){
+			if(x == i){
+				for(y = by*3;y<= j;y++){
+					check[rows[x][y]] = WA;
+				}
 			}
 			else{
-				for(y=j/3*3; y<j/3*3 + 3; y++) check[rows[x][y]] = WA;
+				for(y = by*3;y<= by*3+2;y++){
+					check[rows[x][y]] = WA;
+				}
 			}
 		}
-		if(i+j == 8){      //撇对角线检查
+		//标记撇对角线使用过的数字
+		if(i+j == 8){
 			for(x=0;x<i;x++){
 				check[rows[x][8-x]] = WA;
 			}
 		}
+		//标记百分号区域使用过的数字
+		if(i>=1 && i<=3 && j>=1 && j<=3){
+			for(x= 1;x <= i;x++){
+			if(x == i){
+				for(y = 1;y<= j;y++){
+					check[rows[x][y]] = WA;
+				}
+			}
+			else{
+				for(y = 1;y<= 3;y++){
+					check[rows[x][y]] = WA;
+				}
+			}
+		}
+		}
+		if(i>=5 && i<=7 && j>=5 && j<=7){
+			for(x= 5;x <= i;x++){
+			if(x == i){
+				for(y = 5;y<= j;y++){
+					check[rows[x][y]] = WA;
+				}
+			}
+			else{
+				for(y = 5;y<= 7;y++){
+					check[rows[x][y]] = WA;
+				}
+			}
+		}
+		}
+
 		int flag = 0;
-		for(k=1; k<=COL && flag==0; k++){//挨个试填1~9的数字
+		for(k=1; k<=COL && flag==0; k++){
 			if(check[k]==AC){
 				flag = 1;
 				rows[i][j] = k;
@@ -94,7 +105,7 @@ status OtherRows(int rows[][COL], int i, int j){
 				}
 			}
 		}
-		if(flag==0){     //如果递归没有成功就把该空填0
+		if(flag==0){
 			rows[i][j] = 0;
 			return WA;
 		}
@@ -104,10 +115,29 @@ status OtherRows(int rows[][COL], int i, int j){
 
 
 /**
-* @param   a(数独终盘二维数组), b(数独初盘二维数组), numDigits（挖洞数） 
+* @param   firstrow
 * @return  void
-* @brief   利用挖洞法随机生成数独初盘 
+* @brief  利用当前系统时间随机生成数独棋盘第一行 
 */
+void FirstRow(int firstrow[])
+{
+	int i, j;
+	srand((unsigned int)time(NULL));
+	for(i=0; i<COL; i++){
+		firstrow[i] = rand() % 9 + 1;
+		j = 0;
+		while(j<i){//保证新的赋值不等于已有的数字
+			if(firstrow[j]==firstrow[i]){
+				firstrow[i] = rand() % 9 + 1;
+				j = 0;
+			}
+			else{
+				j++;
+			}
+		}
+	}
+}
+
 void CreatePlay(int a[][COL], int b[][COL], int numDigits)
 {
     int i, j, k;
@@ -116,17 +146,21 @@ void CreatePlay(int a[][COL], int b[][COL], int numDigits)
         for(j=0; j<COL; j++)
             b[i][j] = a[i][j];
 
-    int c[numDigits][2];
+    int c[numDigits][2];  //记录每个洞的行列坐标值
     int m, flag = 0;
+
     for(i=0; i<numDigits; i++){//随机选择位置 
         j = rand() % 9;
         k = rand() % 9;
+
         flag = 0;
-        for(m=0; m<i; m++)
-            if(j==c[m][0] && k==c[m][1])
+        for(m=0; m<i; m++){         //检查是否挖了重复的洞
+            if(j==c[m][0] && k==c[m][1]){
                 flag = 1;
-        if(flag==0){
-            b[j][k] = 0;
+			}
+		}
+        if(flag==0){    //记录洞坐标
+            b[j][k] = 0;//挖洞
             c[i][0] = j;
             c[i][1] = k;
         }
@@ -135,49 +169,35 @@ void CreatePlay(int a[][COL], int b[][COL], int numDigits)
     }
 }
 
-
 /**
 * @param   a(数独初盘二维数组), holes（挖洞数），SudokuFile（文件名） 
 * @return  void
 * @brief   把数独初盘写进CNF文件 
 */
-status TranToCNF(int a[][COL], int holes, char SudokuFile[])
+status TranToCNF(int a[][COL],int holes, char SudokuFile[])
 {
-	FILE *fp = fopen(SudokuFile, "w");
+FILE *fp = fopen(SudokuFile, "w");
 	if(!fp) exit(ERROR);
-	fprintf(fp, "p cnf 729 %d\n",10071 + 81 - holes);
+	fprintf(fp, "p cnf 729 %d\n", 6642+81+333+333+333-holes);
 	int x, y, z;
-	//play盘的已知信息作为单子句加入子句集
-	//子句数目：81-holes
-	for(x=0; x<ROW; x++){
+	for(x=0; x<ROW; x++){//play盘的已知信息作为单子句加入子句集
 		for(y=0; y<COL; y++){
 			if(a[x][y]!=0){
 				fprintf(fp, "%d 0\n", (x+1)*100 + (y+1)*10 + a[x][y]);
 			}
 		}
 	} 
-	//格约束
-	//子句数目：9*9*9=729
-	for(x=1; x<=ROW; x++){//每个格子都可能填1-9的任意一个数字 
-		for(y=1; y<=COL; y++){
+	for(x=1; x<=9; x++){//每个格子都可能填1-9的任意一个数字 
+		for(y=1; y<=9; y++){
 			for(z=1; z<=9; z++){
 				fprintf(fp, "%d ", x*100 + y*10 + z);
 			}
 			fprintf(fp, "0\n");
 		}
 	}
-	int i, j,x2,y2;
-	
+	int i, j, k;
+	int x2,y2;
 	//列约束
-	//子句数目：9*9*9+9*9*36 = 3645
-	for(y=1;y<=COL;y++){
-		for(z=1;z<=9;z++){
-			for(x=1;x<=ROW;x++){
-				fprintf(fp,"%d ",x*100+y*10+z);
-			}
-			fprintf(fp,"0\n");
-		}
-	}
 	for(y=1; y<=9; y++){ 
 		for(z=1; z<=9; z++){
 			for(x=1; x<=8; x++){
@@ -189,16 +209,7 @@ status TranToCNF(int a[][COL], int holes, char SudokuFile[])
 		}
 	}
 	
-	//行约束
-	//子句数目：3645 
-	for(x=1;x<=9;x++){
-		for(z=1;z<=9;z++){
-			for(y=1;y<=9;y++){
-				fprintf(fp,"%d ",x*100+y*10+z);
-			}
-			fprintf(fp,"0\n");
-		}
-	}
+	//行约束 
 	for(x=1; x<=9; x++){
 		for(z=1; z<=9; z++){
 			for(y=1; y<=8; y++){
@@ -211,39 +222,39 @@ status TranToCNF(int a[][COL], int holes, char SudokuFile[])
 	}
 	
 	//宫约束 
-	//子句数目：2997
-	for (i = 1; i <= 7; i += 3){
-        for (j = 1; j <= 7; j += 3){
-            for (z = 1; z <= 9; ++z) {
-                for (x = i; x < i + 3; ++x){
-                    for (y = j; y < j + 3; ++y){
-                        fprintf(fp, "%d ", x*100 + y*10 + z);
+	for(z=1; z<=9; z++){
+		for(i=0; i<=2; i++){
+			for(j=0; j<=2; j++){
+				for(x=1; x<=3; x++){
+					for(y=1; y<=3; y++){
+						for(k=y+1; k<=3; k++){
+							fprintf(fp, "%d ", opp((3*i+x)*100 + (3*j+y)*10 + z));
+							fprintf(fp, "%d 0\n", opp((3*i+x)*100 + (3*j+k)*10 + z));
+						}
+						
 					}
 				}
-                fprintf(fp, "0\n");
-            }
+			}
 		}
 	}
-	for (i = 1; i <= 7; i += 3){
-        for (j = 1; j <= 7; j += 3){
-            for (z = 1; z <= 9; ++z) {
-                for (x = i; x < i + 3; ++x){
-                    for (y = j; y < j + 3; ++y){
-						int v1 = x*100 + y*10 + z;
-                        for (x2 = x; x2 < i + 3; ++x2) {
-                            int y_start = (x2 == x) ? y + 1 : j;
-                            for (y2 = y_start; y2 < j + 3; ++y2) {
-                                int v2 = x2*100 + y2*10 + z;
-                                fprintf(fp, "%d %d 0\n", opp(v1), opp(v2));
-                            }
+	int m;
+	for(z=1; z<=9; z++){
+		for(i=0; i<=2; i++){
+			for(j=0; y<=2; j++){
+				for(x=1; x<=3; x++){
+					for(y=1; y<=3; y++){
+						for(k=x+1; k<=3; k++){
+							for(m=1; m<=3; m++){
+								fprintf(fp, "%d ", opp((3*i+x)*100 + (3*j+y)*10 + z));
+								fprintf(fp, "%d 0\n", opp((3*i+k)*100 + (3*j+m)*10 + z));
+							}
+						}
 					}
 				}
-            }
+			}
 		}
 	}
-}
-    //撇对角线约束
-	//子句数目：9*9+9*36=405
+	//撇对角线约束
 	for(z=1;z<=9;z++){
 		for(x=1,y=9;x<=9;x++,y--){
 			fprintf(fp,"%d ",x*100+y*10+z);
@@ -259,7 +270,6 @@ status TranToCNF(int a[][COL], int holes, char SudokuFile[])
 		}
 	}
 	//上下窗口约束
-	//子句数目：9*2+9*36*2=666
 	for(z=1;z<=9;z++){
 		for(x=2;x<=4;x++){
 			for(y=2;y<=4;y++){
@@ -290,7 +300,7 @@ status TranToCNF(int a[][COL], int holes, char SudokuFile[])
 		}
 		fprintf(fp,"0\n");
 	}
-	for(z=1;z<=9;z++){
+    for(z=1;z<=9;z++){
 		for(x=6;x<=8;x++){
 			for(y=6;y<=8;y++){
 				int v1=x*100+y*10+z;
@@ -323,7 +333,7 @@ status EntrySUDOKU(CHead **C)
 	re = DPLLSolver(C);
 	//end_t = clock();
 	//total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC * 1000;//计时换算
-	if(re==OK){
+	/*if(re==OK){
 		int i, j, k;
         for (i = 1; i <= 9; ++i){
             for (j = 1; j <= 9; ++j){
@@ -336,72 +346,11 @@ status EntrySUDOKU(CHead **C)
 	}
 		}
 		}
-}
+}*/
     return re;
 }
 
-/**
-* @param  int re（DPLL的执行结果），filename（文件名） 
-* @return status（函数执行状态） 
-* @brief  将数独求解结果输入到.res文件中 
-*/
-status SaveSudokuFile(int re, char filename[])
-{
-	int i, j, k, x;
-	//修改拓展名 
-	for(i=0; filename[i]!='\n'; i++){
-		if(filename[i]=='.'){
-			filename[i+1] = 'r';
-			filename[i+2] = 'e';
-			filename[i+3] = 's';
-			break;
-		}
-	}
-	FILE *fp;
-	fp = fopen(filename, "w");
-	if(!fp) exit(-1);
-	if(re==TRUE){//如果re==TRUE，则将数独求解结果输入到文件中 
-		fprintf(fp, "s 1\n");
-		fprintf(fp,"v \n");
-		for(i=1; i<=9; i++){
-			for(j=1; j<=9; j++){
-				for(k=1; k<=9; k++){
-					x = i*100 + j*10 + k;
-					if(counter[x].value==1){
-						fprintf(fp, "%d ", x);
-					}
-				}
-			}
-		}
-		fprintf(fp, "\n");
-	}
-	else{
-		fprintf(fp, "s 0\n");
-		return 0;
-	}
-	fclose(fp);
-	/*这里是检验DPLL算法结果
-	if(re==TRUE){
-		printf("s 1\n");
-		printf("v\n");
-		for(i=1; i<=9; i++){
-			for(j=1; j<=9; j++){
-				for(k=1; k<=9; k++){
-					x = i*100 + j*10 + k;
-					if(counter[x].value==1){
-						printf("%d ", x);
-					}
-				}
-			}
-			printf("\n");
-		}
-		printf("\n");
-	}
-	else{
-		printf("s 0\n");
-	}*/
-	return OK;
-}
+
 
 
 /**
