@@ -1,4 +1,3 @@
-
 #include"Global.h"
 
 status DPLLSolver(CHead **C)
@@ -118,8 +117,6 @@ status DelClause(int x, CHead **C)
 	}
 	return OK;
 }
-
-
 status FreeCNodes(CHead **node)
 {
     CNode *p = (*node)->right;
@@ -187,17 +184,31 @@ int strategy2(CHead **C)
 	PNode rnow = NULL;
 	int x, pos = 0;
 	double max = 0.0;
+	for(int i=0;i<MAXN && counter[i].data!=0;i++){
+		counter[i].count = 0.0;
+		counter[i].positive = 0.0;
+		counter[i].negative = 0.0;
+	}
 	while(dnow!=NULL){
 		rnow = dnow->right;
 		while(rnow!=NULL){
 			x = rnow->data;
-			if(counter[x].count>max){
-				max = counter[x].count;
-				pos = x;
+			counter[abs(x)].count++;
+			if(x>0){
+				counter[abs(x)].negative++;
+			}
+			else{
+				counter[abs(x)].negative++;
 			}
 			rnow = rnow->next;
 		}
 		dnow = dnow->down;
+	}
+	for(int i=0;i<MAXN && counter[i].data!=0;i++){
+		if(counter[i].count>max){
+			max = counter[i].count;
+			pos = i;
+		}
 	}
 	if(pos==0) pos = (*C)->right->data;//用优化方法没找到决策变元时，使用strategy1 
 	if(counter[pos].positive>counter[pos].negative) return pos;//正值频率大于负值，返回正值作为决策变元 
