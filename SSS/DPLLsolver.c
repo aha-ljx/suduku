@@ -1,6 +1,41 @@
 #include"Global.h"
 
-status DPLLSolver(CHead **C)
+status DPLLSolver1(CHead **C)
+{
+	/* ---------- 单子句传播 ---------- */
+    PHead dnow;
+    while ((dnow = isSingle(*C)) != NULL) {
+        int uni = dnow->right->data;
+        counter[abs(uni)].value = (uni > 0) ? 1 : -1;
+        Simplification(uni, C);
+        if (*C == NULL) return TRUE;
+        if (isEmptyClause(*C)) return FALSE;
+    }
+
+    /* ---------- 决策点 ---------- */
+    int var = strategy1(C);               // 选择决策变量
+    int lit = var;                        // 先尝试正文字
+
+    /* 保存旧值以便回溯 */
+    int oldVal = counter[abs(var)].value;
+
+    /* 分支 1：尝试 lit */
+    counter[abs(var)].value = (lit > 0) ? 1 : -1;
+    PHead copy1 = Duplication(C);
+    AddUniClause(lit, &copy1);
+    if (DPLLSolver1(&copy1)) return TRUE;
+
+    /* 分支 2：尝试 -lit */
+    counter[abs(var)].value = (lit > 0) ? -1 : 1;   // 切换赋值
+    PHead copy2 = Duplication(C);
+    AddUniClause(opp(lit), &copy2);
+    if (DPLLSolver1(&copy2)) return TRUE;
+
+    /* 回溯：恢复变量未赋值状态 */
+    counter[abs(var)].value = oldVal;
+    return FALSE;
+}
+status DPLLSolver2(CHead **C)
 {
 	/* ---------- 单子句传播 ---------- */
     PHead dnow;
@@ -23,13 +58,13 @@ status DPLLSolver(CHead **C)
     counter[abs(var)].value = (lit > 0) ? 1 : -1;
     PHead copy1 = Duplication(C);
     AddUniClause(lit, &copy1);
-    if (DPLLSolver(&copy1)) return TRUE;
+    if (DPLLSolver2(&copy1)) return TRUE;
 
     /* 分支 2：尝试 -lit */
     counter[abs(var)].value = (lit > 0) ? -1 : 1;   // 切换赋值
     PHead copy2 = Duplication(C);
     AddUniClause(opp(lit), &copy2);
-    if (DPLLSolver(&copy2)) return TRUE;
+    if (DPLLSolver2(&copy2)) return TRUE;
 
     /* 回溯：恢复变量未赋值状态 */
     counter[abs(var)].value = oldVal;
@@ -175,11 +210,6 @@ status isEmptyClause(CHead *C)
 
 int strategy1(CHead **C)
 {
-	return (*C)->right->data;
-}
-
-int strategy2(CHead **C)
-{
 	PHead dnow = *C;
 	PNode rnow = NULL;
 	int x, pos = 0;
@@ -199,6 +229,41 @@ int strategy2(CHead **C)
 			}
 			else{
 				counter[abs(x)].negative++;
+			}
+			rnow = rnow->next;
+		}
+		dnow = dnow->down;
+	}
+	for(int i=0;i<MAXN && counter[i].data!=0;i++){
+		if(counter[i].count>max){
+			max = counter[i].count;
+			pos = i;
+		}
+	}
+	return (*C)->right->data;
+}
+
+int strategy2(CHead **C)
+{
+	PHead dnow = *C;
+	PNode rnow = NULL;
+	int x, pos = 0;
+	double max = 0.0;
+	for(int i=0;i<MAXN && counter[i].data!=0;i++){
+		counter[i].count = 0.0;
+		counter[i].positive = 0.0;
+		counter[i].negative = 0.0;
+	}
+	while(dnow!=NULL){
+		rnow = dnow->right;
+		while(rnow!=NULL){
+			x = rnow->data;
+			counter[abs(x)].count += pow(0.5, (double)dnow->num);
+			if(x>0){
+				counter[abs(x)].positive += pow(0.5, (double)dnow->num);
+			}
+			else{
+				counter[abs(x)].negative += pow(0.5, (double)dnow->num);
 			}
 			rnow = rnow->next;
 		}
@@ -245,12 +310,12 @@ status AddUniClause(int x, CHead **C)
 	ne->num = 1;
 	PNode node = IniNode(&(ne->right));
 	node->data = x;
-	counter[abs(x)].count += 1;   //更新计数器里的数据
+	counter[abs(x)].count += pow(0.5, 1.0);
 	if(x>0){
-		counter[abs(x)].positive += 1;
+	counter[abs(x)].positive += pow(0.5, 1.0);
 	}
 	else{
-		counter[abs(x)].negative += 1;
+		counter[abs(x)].negative += pow(0.5, 1.0);
 	}
 	node = IniNode(&(node->next));
 	return OK;
@@ -261,27 +326,38 @@ int StartSAT(char FileName[])
 	PHead C = NULL;
 	int re;
 	clock_t start_t, end_t;
-	double total_t;
+	double total_t1,total_t2;
 	FileReader(&C, FileName);                                    //读取.cnf文件 
+
 	start_t = clock();                                           //开始计时 
-	re = DPLLSolver(&C);                                         //进行DPLL 
+	re = DPLLSolver1(&C);                                         //进行DPLL 
 	end_t = clock();                                             //结束计时 
-	total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC * 1000; //计时换算
-	SaveSATFile(re, total_t, FileName);                          //将DPLL结果存入到.res文件中 
+	total_t1 = (double)(end_t - start_t) / CLOCKS_PER_SEC * 1000; //计时换算
+
+    C=NULL;
+    FileReader(&C, FileName);
+    start_t = clock();                                           //开始计时 
+	re = DPLLSolver2(&C);                                         //进行DPLL 
+	end_t = clock();                                             //结束计时 
+	total_t2 = (double)(end_t - start_t) / CLOCKS_PER_SEC * 1000; //计时换算
+
+	SaveSATFile(re, total_t1,total_t2, FileName);                          //将DPLL结果存入到.res文件中 
 	return OK;
 }
 
 
 //re是用来判断DPLL是否正确进行
-status SaveSATFile(int re, double t, char filename[])
+status SaveSATFile(int re, double t1,double t2, char filename[])
 {
-	int i=0;
+	int i=0,temp;
 	for(i=0; filename[i]!='\n'; i++){//修改拓展名 
 		if(filename[i]=='.'){
+            if(filename[i+1] == 'c' && filename[i+2] == 'n' && filename[i+3] == 'f'){
 			filename[i+1] = 'r';
 			filename[i+2] = 'e';
 			filename[i+3] = 's';
 			break;
+            }
 		}
 	}
 	FILE *fp;
@@ -301,9 +377,14 @@ status SaveSATFile(int re, double t, char filename[])
 		fprintf(fp, "\n");
 	}
 	else{
-		fprintf(fp, "s 0\n");
+        fprintf(fp, "s 0\n");
+        temp = t1;
+        t1 = t2;
+        t2 = temp;
 	}
-	fprintf(fp, "t %f", t);
+	fprintf(fp, "没有优化的t %f\n", t1);
+    fprintf(fp,"优化后的t: %f\n",t2);
+	fprintf(fp,"优化率：%f",(t1-t2)/t1*100);
 	fclose(fp);
 	return OK;
 }
