@@ -53,24 +53,6 @@ status FileReader(CHead **C, char filename[])
 	fclose(fp);
 	test(C);//此处可检验是否正确构建链表
 	//将子句长度作为权重来处理变元频率，子句长度越长，权重越低，权重函数：(1/2)^字句长度 
-	i = num2;
-	dnow = *C;
-	while(i>0){
-		i--;
-		rnow = dnow->right;
-		do{
-			x = rnow->data;
-			counter[abs(x)].count += pow(0.5, (double)(dnow->num - 1));
-			if(x>0){
-				counter[abs(x)].positive += pow(0.5, (double)(dnow->num - 1));
-			}
-			else{
-				counter[abs(x)].negative += pow(0.5, (double)(dnow->num - 1));
-			}
-			rnow = rnow->next;
-		}while(x!=0);
-		dnow = dnow->down;
-	}
 	return OK;
 }
 
@@ -146,4 +128,5 @@ void test(CHead **C)
 	}
 	printf("\n");
 	*/
+
 }
