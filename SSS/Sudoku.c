@@ -330,7 +330,7 @@ status EntrySUDOKU(CHead **C)
 	//clock_t start_t, end_t;
 	//double total_t;
 	//start_t = clock();
-	re = DPLLSolver(C);
+	re = DPLLSolver2(C);
 	//end_t = clock();
 	//total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC * 1000;//计时换算
 	/*if(re==OK){
@@ -378,3 +378,4 @@ void print(int a[][COL])
     }
     printf("   ----------------------------------\n");
 }
+
